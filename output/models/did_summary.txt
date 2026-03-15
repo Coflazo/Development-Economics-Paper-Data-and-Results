@@ -1,0 +1,47 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:             Log_GDP_pc   R-squared:                       0.968
+Model:                            OLS   Adj. R-squared:                  0.967
+Method:                 Least Squares   F-statistic:                     336.2
+Date:                Sun, 15 Mar 2026   Prob (F-statistic):          1.42e-101
+Time:                        18:34:30   Log-Likelihood:                 88.771
+No. Observations:                 208   AIC:                            -161.5
+Df Residuals:                     200   BIC:                            -134.8
+Df Model:                           7                                         
+Covariance Type:                  HC3                                         
+========================================================================================
+                           coef    std err          z      P>|z|      [0.025      0.975]
+----------------------------------------------------------------------------------------
+Intercept                6.6204      0.024    276.288      0.000       6.573       6.667
+Colonial_period         -0.0600      0.023     -2.581      0.010      -0.106      -0.014
+Post_colonial           -0.5774      0.043    -13.532      0.000      -0.661      -0.494
+Interaction_Colonial    -0.9209     57.428     -0.016      0.987    -113.477     111.635
+Interaction_Post        -0.5540      0.035    -15.671      0.000      -0.623      -0.485
+Population            5.136e-05   9.71e-07     52.917      0.000    4.95e-05    5.33e-05
+Trade                    0.0003   5.38e-05      5.877      0.000       0.000       0.000
+Institutions             0.0047      0.002      2.106      0.035       0.000       0.009
+==============================================================================
+Omnibus:                       10.702   Durbin-Watson:                   1.318
+Prob(Omnibus):                  0.005   Jarque-Bera (JB):               10.850
+Skew:                          -0.523   Prob(JB):                      0.00441
+Kurtosis:                       3.400   Cond. No.                     5.60e+05
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC3)
+[2] The condition number is large, 5.6e+05. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+========================================================================
+KEY INTERACTION TERMS
+========================================================================
+
+Interaction_Colonial:
+  Coefficient : -0.920947
+  Std. Error  : 57.427577
+  p-value     : 0.987205
+
+Interaction_Post:
+  Coefficient : -0.553954
+  Std. Error  : 0.035348
+  p-value     : 0.000000
