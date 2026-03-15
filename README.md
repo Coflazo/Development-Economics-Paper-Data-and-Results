@@ -1,16 +1,17 @@
 <div align="center">
 
 # Divergence under Colonialism 
-### A Difference-in-Differences Analysis of Economic Trajectories in Myanmar and Thailand (1850–2020)
+### Data and Results Pipeline: Myanmar vs Thailand (1850–2020)
 
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Statsmodels](https://img.shields.io/badge/Statsmodels-0052CC?style=flat-square)](https://www.statsmodels.org/)
 [![SymPy](https://img.shields.io/badge/SymPy-7B9E36?style=flat-square)](https://www.sympy.org/)
 [![Seaborn](https://img.shields.io/badge/Seaborn-4C72B0?style=flat-square)](https://seaborn.pydata.org/)
 [![Data](https://img.shields.io/badge/Data-Maddison_|_Polity5-green?style=flat-square)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)]()
 
-An end-to-end quasi-experimental econometric pipeline estimating the longitudinal causal impact of British colonization (1824–1948) on Myanmar’s macro-economy, constructed against the uncolonized counterfactual trajectory of Thailand (Siam).
+Hey there! 👋 This repository holds all the code, datasets, and generated graphs for the **Data and Results** section of our main research paper. 
+
+The main paper looks at the long-term economic effects of British colonial rule by comparing Myanmar (who was colonized from 1824–1948) against Thailand (who managed to stay independent). We used a Difference-in-Differences (DiD) model to see how their economies diverged.
 
 ---
 
@@ -18,47 +19,47 @@ An end-to-end quasi-experimental econometric pipeline estimating the longitudina
 
 <br/>
 
-## 1. Introduction and Project Objective
+## 1. Where We Got the Data
 
-This repository orchestrates a robust **multi-period Difference-in-Differences (DiD) framework** to quantitatively assess the structural legacy of extractive colonial institutions. By harmonizing centuries of highly heterogeneous historic macro-panel data, the pipeline evaluates whether the exogenous shock of British imperial extraction engineered a permanent divergence in the comparative macroeconomic outcomes of mainland Southeast Asia.
+To build a dataset that goes all the way back to 1820, we had to pull information from a few different places:
 
-<br/>
-
-## 2. Research & Datasets
-
-Achieving a mathematically rigourous baseline for 19th-century Southeast Asia required an advanced curation pipeline:
-
-| Dataset | Type | Econometric Purpose | Handling & Merging Logic |
-|---------|------|----------------------|---------------------------|
-| **Maddison** | _XLSX_ | Real $GDP\_pc$ (PPP 2011\$) & Population (`1820-2018`). | Linearly interpolated strictly up to $\leq 5$ years. |
-| **Polity5** | _XLS_ | Institutional Quality Index. | Regime-transition format parsed and expanded to annual differences. Interregnum codes nullified to `NaN`. Forward-filled conservatively to $\leq 3$ years. ($Polity_2 = Democ - Autoc$) |
-| **Rice Exports**| _PDF_ | Commodity Trade Proxy. | Regex-extracted via `PyPDF2` from _"The Rice Industry of Mainland Southeast Asia 1850-1914"_. |
-| **FRED** | _XLSX_ | Nominal GDP Context. | *Modern current-USD arrays stripped and intentionally excluded* to prevent systemic unit-commensurability violations against Maddison PPP structures. |
+- **Maddison Project Database**: This is where we got our main metric: real GDP per capita (in 2011 PPP dollars) and population numbers.
+- **Polity5 Dataset**: We used this to figure out how democratic or autocratic the governments were. We calculated a `polity2` score by taking the democratic characteristics and subtracting the autocratic ones. 
+- **Historical Rice Exports**: To measure how much export-based agriculture was going on, we pulled historical rice export numbers (1860-1914) right out of Norman G. Owen’s book *The Rice Industry of Mainland Southeast Asia*.
+- **FRED**: We grabbed some modern GDP numbers from FRED just to look at, but we actually **didn't** use them in the final regression because the units (current USD) didn't match our historical Maddison data (PPP).
 
 <br/>
 
-## 3. Difference-in-Differences Formalization
+## 2. Cleaning and Merging
 
-The standard mathematical approach isolates the Average Treatment Effect on the Treated (ATT) via interaction terms. Time-invariant properties are strictly controlled to prevent singular matrix convergence. Formalized via the `SymPy` algebraic engine:
+Historical data is super messy, so we had to be really careful not to accidentally "make up" trends while cleaning it up into a panel of 208 observations:
+- We only filled in missing GDP numbers if the gap was 5 years or less.
+- We only carried Polity5 institutional scores forward for a maximum of 3 years so we didn't miss sudden regime changes.
+- Everything else was left as `NaN` to make sure the model relies on real historical facts. 
+
+**Note on the Model Setup:** When we set up the DiD regression, we had to drop the basic `Colonised` dummy variable. Since Myanmar is our only treated country, leaving it in caused perfect multicollinearity (the infamous "dummy variable trap"). The panel structure handles it perfectly without it!
+
+<br/>
+
+## 3. The Math (Difference-in-Differences)
+
+To figure out the Average Treatment Effect on the Treated, we set up this OLS equation. Log-transforming the GDP helps stabilize things over a two-century timeline.
 
 <blockquote>
   <p align="center">
-    <img src="https://render.githubusercontent.com/render/math?math=LogGDP_{it} = \beta_{0} %2B \beta_{1} Colonial_{t} %2B \beta_{2} Post_{t} %2B \beta_{3} (Colonial_{t} \times Colonised_{i}) %2B \beta_{4} (Post_{t} \times Colonised_{i}) %2B \beta_{5} Pop_{it} %2B \beta_{6} Trade_{it} %2B \beta_{7} Inst_{it} %2B \epsilon_{it}">
+    <img src="https://render.githubusercontent.com/render/math?math=log(GDP_{it}) = \beta_{0} %2B \beta_{1} Colonial_{t} %2B \beta_{2} Post_{t} %2B \beta_{3} (Colonial_{t} \times Colonised_{i}) %2B \beta_{4} (Post_{t} \times Colonised_{i}) %2B \beta_{5} Population %2B \beta_{6} Trade %2B \beta_{7} Institutions">
   </p>
 </blockquote>
 
-*Note: The parameter vector deliberately excludes the time-invariant `Colonised` discrete intercept ($ \beta_{1} $) from OLS formulation to resolve perfect collinearity overlap with the temporal binary states. The DiD causal vectors ($ \beta_3, \beta_4 $) remain perfectly identified.*
-
-### 3.1. The Parallel Trends Assumption
-The validity of this estimation relies fundamentally on the counterfactual logic: **Thailand offers an empirically optimal twin**. Both states were pre-industrial, agrarian, Theravada-Buddhist kingdoms bound to riverine rice cultivation and deltaic geography. They absorbed identical 19th-century trade booms. Thailand, escaping colonization, provides the baseline rate of secular growth.
+**Why Thailand?** For this math to work, we need a "parallel trends assumption." Basically, Thailand is the perfect baseline because, before the 1900s, both countries were super similar—river-delta rice farming, Theravada Buddhist societies, and part of the same trade networks.
 
 <br/>
 
-## 4. OLS Regression Engine and Robust Outputs
+## 4. The Regression Results
 
-An Ordinary Least Squares (OLS) mechanism fitted over $N = 208$ complete observations, utilizing **Heteroskedasticity-Consistent Covariance Matrices (HC3 robust standard errors)**.
+We ran the model using ordinary least squares with HC3 robust standard errors. It fits the data really well ($R^2 = 0.968$).
 
-### Model Execution Summary (`did_summary.txt`)
+Here is the full summary output generated by our code:
 
 ```text
                             OLS Regression Results                            
@@ -66,8 +67,12 @@ An Ordinary Least Squares (OLS) mechanism fitted over $N = 208$ complete observa
 Dep. Variable:             Log_GDP_pc   R-squared:                       0.968
 Model:                            OLS   Adj. R-squared:                  0.967
 Method:                 Least Squares   F-statistic:                     336.2
-No. Observations:                 208   Prob (F-statistic):          1.42e-101
-Covariance Type:                  HC3   Log-Likelihood:                 88.771
+Date:                Sun, 15 Mar 2026   Prob (F-statistic):          1.42e-101
+Time:                        18:34:30   Log-Likelihood:                 88.771
+No. Observations:                 208   AIC:                            -161.5
+Df Residuals:                     200   BIC:                            -134.8
+Df Model:                           7                                         
+Covariance Type:                  HC3                                         
 ========================================================================================
                            coef    std err          z      P>|z|      [0.025      0.975]
 ----------------------------------------------------------------------------------------
@@ -79,22 +84,48 @@ Interaction_Post        -0.5540      0.035    -15.671      0.000      -0.623    
 Population            5.136e-05   9.71e-07     52.917      0.000    4.95e-05    5.33e-05
 Trade                    0.0003   5.38e-05      5.877      0.000       0.000       0.000
 Institutions             0.0047      0.002      2.106      0.035       0.000       0.009
-========================================================================================
+==============================================================================
+Omnibus:                       10.702   Durbin-Watson:                   1.318
+Prob(Omnibus):                  0.005   Jarque-Bera (JB):               10.850
+Skew:                          -0.523   Prob(JB):                      0.00441
+Kurtosis:                       3.400   Cond. No.                     5.60e+05
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC3)
+[2] The condition number is large, 5.6e+05. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+========================================================================
+KEY INTERACTION TERMS
+========================================================================
+
+Interaction_Colonial:
+  Coefficient : -0.920947
+  Std. Error  : 57.427577
+  p-value     : 0.987205
+
+Interaction_Post:
+  Coefficient : -0.553954
+  Std. Error  : 0.035348
+  p-value     : 0.000000
 ```
 
-### 4.1. The Persistent Post-Colonial Divergence
-**`Interaction_Post (\beta = -0.5540, p < 0.001)`**
-Logarithmic conversion precisely computes: $(e^{-0.5540} - 1) \times 100$.
-> **Result**: **Myanmar's post-1948 GDP per capita suffered a structurally persistent suppression of $\approx \mathbf{42.5\%}$ relative to the Thai counterfactual trajectory.** This confirms the historiographical consensus surrounding institutional inertia: extractive bureaucratic strata, monocultural export reliance, and weak property rights established by the British persisted post-independence, exacerbating isolationist policies spanning 1962–2011.
+### What does this actually mean?
+The most important number up there is the `Interaction_Post` coefficient of `-0.5540` (and it's super significant at $p < 0.001$!). Because we log-transformed the GDP, we do some quick math on it ($e^{-0.5540} - 1$) which gives us roughly `-0.425`. 
+
+**This means Myanmar's post-independence GDP per capita was about 42.5% lower than what it would have been if they followed Thailand's non-colonized trajectory.** This totally backs up the idea that the extractive institutions built during the colonial era caused serious long-term damage that carried over into independence.
+
+*(Note: The colonial era effect `Interaction_Colonial` wasn't statistically significant, but that's mostly because 19th-century economic records are pretty spotty, so the standard errors get huge).*
 
 <br/>
 
-## 5. Statistical Data Visualizations
+## 5. Visualizing the Divergence
 
-Programmatic aesthetic formulation strictly enforces an academic C2 standard, generating 300-DPI matrix structures embedded with University of Amsterdam typography scaling.
+We plotted the data to make the split really obvious!
 
-### I. The Trajectory Matrix
-Verifying the $-42.5\%$ post-period econometrics logic visually. Red shading highlights the duration of active British colonization. 
+### The GDP Split
+You can see that after the colonial period ends, Thailand's economy takes off with export industrialization while Myanmar basically stagnates.
 <br>
 <div align="center">
   <img src="output/figures/gdp_trajectory.png" width="900" alt="Comparative GDP Trajectory: Myanmar vs Thailand (1850-2020)">
@@ -102,8 +133,8 @@ Verifying the $-42.5\%$ post-period econometrics logic visually. Red shading hig
 
 <br>
 
-### II. Export Divergence Dynamics
-Quantitatively validates the high-colonial hyper-extraction enclave; enormous trade volumes originating in Rangoon entirely failed to foster long-term endogenous growth multipliers.
+### The Rice Export Boom
+During the colonial era, the British turned Burma into a massive export hub. Check out the massive spike in rice leaving Rangoon compared to Bangkok. Ultimately, all that extraction didn't translate into domestic wealth!
 <br>
 <div align="center">
   <img src="output/figures/export_divergence.png" width="900" alt="Rice Export Divergence: Burma vs Siam (1860-1914)">
@@ -111,16 +142,10 @@ Quantitatively validates the high-colonial hyper-extraction enclave; enormous tr
 
 <br/>
 
-## 6. Local Pipeline Execution
+## 6. Running the Code Yourself
 
-Dynamically reproduce the analytical findings—from historical parsing to robust matrix inversion—with a single execution script:
+If you want to re-run the numbers from scratch, just execute the python script:
 
 ```bash
-# Clone repository and execute primary pipeline
 python3 src/did_analysis.py
 ```
-
-<br/>
-<div align="center">
-  <sub>Generated mathematically and econometrically matching standard scientific execution models.</sub>
-</div>
