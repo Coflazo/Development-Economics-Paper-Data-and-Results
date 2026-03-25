@@ -66,6 +66,7 @@ rice_data = {
 }
 
 # burma footnote says average is 2411, so using that for the missing years
+burma_avg_1902_11 = 2411
 for i, yr in enumerate(rice_data["Year"]):
     if yr >= 1903 and yr <= 1914 and np.isnan(rice_data["Burma_exports"][i]):
         rice_data["Burma_exports"][i] = burma_avg_1902_11
@@ -103,10 +104,12 @@ df_pol = pd.read_excel(polity_path)
 df_pol = df_pol[df_pol["scode"].isin(["MYA", "THI"])].copy()
 
 # handle the weird -66/-77 codes by making them nan
+for col in ["democ", "autoc"]:
     df_pol[col] = pd.to_numeric(df_pol[col], errors="coerce")
     df_pol.loc[df_pol[col].isin([-66, -77, -88]), col] = np.nan
 
 # the data is in periods, but we need it year by year
+annual_rows = []
 for _, row in df_pol.iterrows():
     start_yr = int(row["byear"])
     end_yr = int(row["eyear"]) if row["eyear"] < 9000 else 2020
@@ -190,7 +193,7 @@ for country in countries:
 
     # only filling polity stuff forward a few years so we dont accidentally make up a regime change
     df_master.loc[idx, "polity2"] = (
-        df_master.loc[idx, "polity2"].fillna(method="ffill", limit=3)
+        df_master.loc[idx, "polity2"].ffill(limit=3)
     )
 
     # fixing gdp gaps but only short ones so we dont jump miles ahead
@@ -414,13 +417,24 @@ ax2.plot(df_rice["Year"], df_rice["Siam_exports"], color="#1A5F7A", linewidth=2.
 ax2.fill_between(df_rice["Year"], df_rice["Burma_exports"], df_rice["Siam_exports"],
                   alpha=0.08, color="#666666", zorder=1)
 
+# clarify that 1903-1914 Burma exports are table-footnote averages
+imputed_mask = df_rice["Year"].between(1903, 1914)
+ax2.plot(df_rice.loc[imputed_mask, "Year"], df_rice.loc[imputed_mask, "Burma_exports"],
+         color="#C21010", linewidth=2.2, linestyle=":", marker="o", markersize=3.8,
+         label="Burma (1903–1914, footnote average)")
+ax2.annotate("Burma values for 1903–1914\nuse Table I-A footnote average (2411)",
+             xy=(1908, 2411), xytext=(1876, 2600),
+             arrowprops=dict(arrowstyle="->", color="#555555", lw=1.0),
+             fontsize=10, color="#444444",
+             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#BBBBBB", alpha=0.85))
+
 ax2.set_xlabel("Year", fontsize=13, fontweight="medium")
 ax2.set_ylabel("Rice Exports (000 short tons)", fontsize=13, fontweight="medium")
 ax2.set_title("Rice Export Divergence: Burma vs Siam (1860–1914)",
               fontsize=15, fontweight="bold", fontfamily="serif", pad=15)
 ax2.set_xlim(1860, 1914)
-ax2.legend(loc="upper left", frameon=True, framealpha=0.9, fontsize=11,
-           edgecolor="#cccccc")
+ax2.legend(loc="upper center", ncol=3, frameon=True, framealpha=0.9, fontsize=10,
+            edgecolor="#cccccc")
 ax2.grid(axis="y", alpha=0.3, linestyle="--")
 ax2.tick_params(axis="both", which="major", labelsize=11)
 sns.despine(ax=ax2)

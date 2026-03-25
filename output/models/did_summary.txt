@@ -3,8 +3,8 @@
 Dep. Variable:             Log_GDP_pc   R-squared:                       0.968
 Model:                            OLS   Adj. R-squared:                  0.967
 Method:                 Least Squares   F-statistic:                     336.2
-Date:                Sun, 15 Mar 2026   Prob (F-statistic):          1.42e-101
-Time:                        18:34:30   Log-Likelihood:                 88.771
+Date:                Wed, 25 Mar 2026   Prob (F-statistic):          1.42e-101
+Time:                        21:25:37   Log-Likelihood:                 88.771
 No. Observations:                 208   AIC:                            -161.5
 Df Residuals:                     200   BIC:                            -134.8
 Df Model:                           7                                         
